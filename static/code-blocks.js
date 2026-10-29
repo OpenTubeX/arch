@@ -8,6 +8,7 @@ const shellCommands = new Set([
   'grep',
   'install',
   'pacman',
+  'pacman-conf',
   'pacman-key',
   'rpm',
   'sudo',

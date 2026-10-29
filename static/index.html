@@ -47,7 +47,7 @@ sudo pacman-key --lsign-key 4A60061625240FB56569221B4672DA445C55F193</code></pre
 
     <p>Add the repository:</p>
     <div class="card">
-      <pre><code class="language-shell">sudo tee -a /etc/pacman.conf &gt;/dev/null &lt;&lt;'REPO'
+      <pre><code class="language-shell">grep -qxF '[opentubex]' /etc/pacman.conf || sudo tee -a /etc/pacman.conf &gt;/dev/null &lt;&lt;'REPO'
 
 [opentubex]
 SigLevel = Required DatabaseRequired
@@ -66,7 +66,7 @@ REPO</code></pre>
       nightly repository instead. It also receives stable releases.
     </p>
     <div class="card">
-      <pre><code class="language-shell">sudo tee -a /etc/pacman.conf &gt;/dev/null &lt;&lt;'REPO'
+      <pre><code class="language-shell">grep -qxF '[opentubex-nightly]' /etc/pacman.conf || sudo tee -a /etc/pacman.conf &gt;/dev/null &lt;&lt;'REPO'
 
 [opentubex-nightly]
 SigLevel = Required DatabaseRequired

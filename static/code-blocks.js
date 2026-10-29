@@ -5,6 +5,7 @@ const shellCommands = new Set([
   'echo',
   'flatpak',
   'gpg',
+  'grep',
   'install',
   'pacman',
   'pacman-key',

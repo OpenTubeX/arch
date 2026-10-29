@@ -1,0 +1,186 @@
+name: Publish Arch repository
+
+on:
+  repository_dispatch:
+    types: [opentubex-release, opentubex-nightly]
+  workflow_dispatch:
+    inputs:
+      releaseTag:
+        description: Release tag to publish (for example, v0.37.0-beta)
+        required: false
+        type: string
+
+permissions:
+  contents: read
+
+concurrency:
+  group: arch-repository
+  cancel-in-progress: false
+
+jobs:
+  build:
+    name: Build signed repository
+    runs-on: ubuntu-latest
+    container: archlinux:base-devel
+    permissions:
+      contents: read
+    env:
+      GH_TOKEN: ${{ github.token }}
+
+    steps:
+      - name: Install tools
+        run: pacman --sync --refresh --sysupgrade --noconfirm git github-cli wget
+
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+
+      - name: Resolve releases
+        id: release
+        shell: bash
+        env:
+          INPUT_TAG: ${{ github.event.client_payload.tag || inputs.releaseTag }}
+        run: |
+          set -euo pipefail
+          requested_tag="$INPUT_TAG"
+          stable_tag=''
+          nightly_tag=''
+          promote_stable=false
+
+          if [[ "$requested_tag" =~ ^v([0-9]+\.[0-9]+\.[0-9]+)-beta$ ]]; then
+            stable_tag="$requested_tag"
+            promote_stable=true
+          elif [[ "$requested_tag" =~ ^v([0-9]+\.[0-9]+\.[0-9]+-nightly-[0-9]+)$ ]]; then
+            nightly_tag="$requested_tag"
+          elif [[ -n "$requested_tag" ]]; then
+            echo "Expected a stable or nightly OpenTubeX tag, got: $requested_tag" >&2
+            exit 1
+          fi
+
+          if [[ -z "$stable_tag" ]]; then
+            stable_tag="$(gh release view --repo OpenTubeX/OpenTubeX --json tagName --jq .tagName)"
+            if [[ -z "$requested_tag" ]]; then
+              promote_stable=true
+            fi
+          fi
+          if [[ ! "$stable_tag" =~ ^v([0-9]+\.[0-9]+\.[0-9]+)-beta$ ]]; then
+            echo "Expected a stable tag, got: $stable_tag" >&2
+            exit 1
+          fi
+          stable_version="${BASH_REMATCH[1]}"
+
+          if [[ -z "$nightly_tag" ]]; then
+            nightly_tag="$(gh release list --repo OpenTubeX/OpenTubeX --limit 100 \
+              --json createdAt,isPrerelease,tagName \
+              --jq '[.[] | select(.isPrerelease and (.tagName | test("^v[0-9]+\\.[0-9]+\\.[0-9]+-nightly-[0-9]+$")))] | sort_by(.createdAt) | reverse | .[0].tagName // ""')"
+          fi
+
+          nightly_version=''
+          if [[ -n "$nightly_tag" ]]; then
+            if [[ ! "$nightly_tag" =~ ^v([0-9]+\.[0-9]+\.[0-9]+-nightly-[0-9]+)$ ]]; then
+              echo "Expected a nightly tag, got: $nightly_tag" >&2
+              exit 1
+            fi
+            nightly_version="${BASH_REMATCH[1]}"
+          fi
+
+          {
+            echo "stable_tag=$stable_tag"
+            echo "stable_version=$stable_version"
+            echo "nightly_tag=$nightly_tag"
+            echo "nightly_version=$nightly_version"
+            echo "promote_stable=$promote_stable"
+          } >> "$GITHUB_OUTPUT"
+
+      - name: Download Debian packages
+        env:
+          RELEASE_TAG: ${{ steps.release.outputs.stable_tag }}
+          VERSION: ${{ steps.release.outputs.stable_version }}
+        shell: bash
+        run: |
+          set -euo pipefail
+          mkdir release-files
+          gh release download "$RELEASE_TAG" \
+            --repo OpenTubeX/OpenTubeX \
+            --dir release-files \
+            --pattern "opentubex_${VERSION}_beta_amd64.deb" \
+            --pattern "opentubex_${VERSION}_beta_arm64.deb"
+
+      - name: Download nightly Debian packages
+        if: steps.release.outputs.promote_stable != 'true' && steps.release.outputs.nightly_tag != ''
+        env:
+          RELEASE_TAG: ${{ steps.release.outputs.nightly_tag }}
+          VERSION: ${{ steps.release.outputs.nightly_version }}
+        shell: bash
+        run: |
+          set -euo pipefail
+          mkdir nightly-files
+          for arch in amd64 arm64; do
+            asset="opentubex_${VERSION}_${arch}.deb"
+            wget --quiet \
+              --output-document="nightly-files/${asset}" \
+              "https://github.com/OpenTubeX/OpenTubeX/releases/download/${RELEASE_TAG}/${asset}"
+          done
+
+      - name: Promote stable Debian packages to nightly
+        if: steps.release.outputs.promote_stable == 'true'
+        run: cp --recursive release-files nightly-files
+
+      # makepkg refuses to run as root.
+      - name: Create build user
+        run: |
+          useradd --create-home builder
+          chown -R builder:builder "$GITHUB_WORKSPACE"
+
+      - name: Import signing key
+        id: signing-key
+        env:
+          ARCH_GPG_PRIVATE_KEY: ${{ secrets.ARCH_GPG_PRIVATE_KEY }}
+        shell: bash
+        run: |
+          set -euo pipefail
+          if [[ -z "$ARCH_GPG_PRIVATE_KEY" ]]; then
+            echo 'The ARCH_GPG_PRIVATE_KEY secret is not configured.' >&2
+            exit 1
+          fi
+
+          printf '%s\n' "$ARCH_GPG_PRIVATE_KEY" | runuser -u builder -- gpg --batch --import
+          fingerprint="$(runuser -u builder -- gpg --batch --with-colons --list-secret-keys | awk -F: '$1 == "fpr" { print $10; exit }')"
+
+          if [[ -z "$fingerprint" ]]; then
+            echo 'No private signing key was imported.' >&2
+            exit 1
+          fi
+
+          echo "fingerprint=$fingerprint" >> "$GITHUB_OUTPUT"
+
+      - name: Build signed repository
+        env:
+          ARCH_GPG_KEY_ID: ${{ steps.signing-key.outputs.fingerprint }}
+          ARCH_GPG_PASSPHRASE: ${{ secrets.ARCH_GPG_PASSPHRASE }}
+          ARCH_PUBLISHED_URL: https://arch.opentubex.org
+        run: runuser -u builder -- ./scripts/build-repository.sh release-files repository nightly-files
+
+      - name: Upload repository
+        uses: actions/upload-pages-artifact@fc324d3547104276b827a68afc52ff2a11cc49c9 # v5.0.0
+        with:
+          path: repository
+
+  deploy:
+    name: Publish repository
+    needs: build
+    runs-on: ubuntu-latest
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    permissions:
+      id-token: write
+      pages: write
+
+    steps:
+      - name: Configure GitHub Pages
+        uses: actions/configure-pages@45bfe0192ca1faeb007ade9deae92b16b8254a0d # v6.0.0
+
+      - name: Deploy repository
+        id: deployment
+        uses: actions/deploy-pages@368f82528645a54fb793d4d04e342629a3f51346 # v5.0.1

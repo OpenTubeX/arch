@@ -9,7 +9,7 @@ Linux ARM at [arch.opentubex.org](https://arch.opentubex.org). It supports
 Download the repository signing key and check its fingerprint:
 
 ```sh
-wget -O opentubex.asc https://arch.opentubex.org/opentubex.asc
+curl -fsSL -o opentubex.asc https://arch.opentubex.org/opentubex.asc
 gpg --show-keys --fingerprint opentubex.asc
 ```
 

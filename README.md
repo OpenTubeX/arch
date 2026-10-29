@@ -29,7 +29,7 @@ sudo pacman-key --lsign-key 4A60061625240FB56569221B4672DA445C55F193
 Add the repository:
 
 ```sh
-grep -qxF '[opentubex]' /etc/pacman.conf || sudo tee -a /etc/pacman.conf >/dev/null <<'REPO'
+grep -q '^[[:space:]]*\[opentubex\][[:space:]]*$' /etc/pacman.conf || sudo tee -a /etc/pacman.conf >/dev/null <<'REPO'
 
 [opentubex]
 SigLevel = Required DatabaseRequired

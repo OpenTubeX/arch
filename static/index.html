@@ -47,7 +47,7 @@ sudo pacman-key --lsign-key 4A60061625240FB56569221B4672DA445C55F193</code></pre
 
     <p>Add the repository:</p>
     <div class="card">
-      <pre><code class="language-shell">grep -qxF '[opentubex]' /etc/pacman.conf || sudo tee -a /etc/pacman.conf &gt;/dev/null &lt;&lt;'REPO'
+      <pre><code class="language-shell">grep -q '^[[:space:]]*\[opentubex\][[:space:]]*$' /etc/pacman.conf || sudo tee -a /etc/pacman.conf &gt;/dev/null &lt;&lt;'REPO'
 
 [opentubex]
 SigLevel = Required DatabaseRequired
@@ -68,7 +68,7 @@ REPO</code></pre>
       section, remove it first, or pacman keeps installing the stable package.
     </p>
     <div class="card">
-      <pre><code class="language-shell">grep -qxF '[opentubex-nightly]' /etc/pacman.conf || sudo tee -a /etc/pacman.conf &gt;/dev/null &lt;&lt;'REPO'
+      <pre><code class="language-shell">grep -q '^[[:space:]]*\[opentubex-nightly\][[:space:]]*$' /etc/pacman.conf || sudo tee -a /etc/pacman.conf &gt;/dev/null &lt;&lt;'REPO'
 
 [opentubex-nightly]
 SigLevel = Required DatabaseRequired

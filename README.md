@@ -26,15 +26,14 @@ sudo pacman-key --add opentubex.asc
 sudo pacman-key --lsign-key 4A60061625240FB56569221B4672DA445C55F193
 ```
 
-Add the repository:
+Add the repository. If `/etc/pacman.conf` already has an `[opentubex-nightly]`
+section, remove it first, or pacman keeps installing nightly builds.
 
 ```sh
-grep -q '^[[:space:]]*\[opentubex\][[:space:]]*$' /etc/pacman.conf || sudo tee -a /etc/pacman.conf >/dev/null <<'REPO'
-
-[opentubex]
-SigLevel = Required DatabaseRequired
-Server = https://arch.opentubex.org/$repo/$arch
-REPO
+grep -q '^[[:space:]]*\[opentubex\][[:space:]]*$' /etc/pacman.conf ||
+  printf '%s\n' '' '[opentubex]' 'SigLevel = Required DatabaseRequired' \
+    'Server = https://arch.opentubex.org/$repo/$arch' |
+  sudo tee -a /etc/pacman.conf >/dev/null
 ```
 
 Install OpenTubeX, or update it with the rest of your system:

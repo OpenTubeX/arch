@@ -45,14 +45,16 @@ gpg --show-keys --fingerprint opentubex.asc</code></pre>
 sudo pacman-key --lsign-key 4A60061625240FB56569221B4672DA445C55F193</code></pre>
     </div>
 
-    <p>Add the repository:</p>
+    <p>
+      Add the repository. If <code>/etc/pacman.conf</code> already has an
+      <code>[opentubex-nightly]</code> section, remove it first, or pacman keeps
+      installing nightly builds.
+    </p>
     <div class="card">
-      <pre><code class="language-shell">grep -q '^[[:space:]]*\[opentubex\][[:space:]]*$' /etc/pacman.conf || sudo tee -a /etc/pacman.conf &gt;/dev/null &lt;&lt;'REPO'
-
-[opentubex]
-SigLevel = Required DatabaseRequired
-Server = https://arch.opentubex.org/$repo/$arch
-REPO</code></pre>
+      <pre><code class="language-shell">grep -q '^[[:space:]]*\[opentubex\][[:space:]]*$' /etc/pacman.conf ||
+  printf '%s\n' '' '[opentubex]' 'SigLevel = Required DatabaseRequired' \
+    'Server = https://arch.opentubex.org/$repo/$arch' |
+  sudo tee -a /etc/pacman.conf &gt;/dev/null</code></pre>
     </div>
 
     <p>Install OpenTubeX, or update it with the rest of your system:</p>
@@ -68,12 +70,10 @@ REPO</code></pre>
       section, remove it first, or pacman keeps installing the stable package.
     </p>
     <div class="card">
-      <pre><code class="language-shell">grep -q '^[[:space:]]*\[opentubex-nightly\][[:space:]]*$' /etc/pacman.conf || sudo tee -a /etc/pacman.conf &gt;/dev/null &lt;&lt;'REPO'
-
-[opentubex-nightly]
-SigLevel = Required DatabaseRequired
-Server = https://arch.opentubex.org/$repo/$arch
-REPO</code></pre>
+      <pre><code class="language-shell">grep -q '^[[:space:]]*\[opentubex-nightly\][[:space:]]*$' /etc/pacman.conf ||
+  printf '%s\n' '' '[opentubex-nightly]' 'SigLevel = Required DatabaseRequired' \
+    'Server = https://arch.opentubex.org/$repo/$arch' |
+  sudo tee -a /etc/pacman.conf &gt;/dev/null</code></pre>
     </div>
     <div class="card">
       <pre><code class="language-shell">sudo pacman -Syu opentubex</code></pre>

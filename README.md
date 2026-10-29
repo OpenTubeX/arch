@@ -69,8 +69,11 @@ Published packages are reused so their files and signatures stay identical in
 pacman caches. Increment `pkgrel` in `packaging/PKGBUILD` when a packaging
 change must reach the current version.
 
-The workflow can also be run manually with a release tag. If no tag is given,
-it publishes the latest release.
+Each run publishes the newest stable and nightly releases, so a replayed or
+manual run cannot replace a newer package. The requested tag only matters when
+the release list does not include it yet. A stable release replaces the nightly
+package only when its version is newer than the release the nightly follows.
+The workflow can also be run manually, with or without a release tag.
 
 ## Maintainer setup
 

@@ -43,45 +43,49 @@ jobs:
         run: |
           set -euo pipefail
           requested_tag="$INPUT_TAG"
-          stable_tag=''
-          nightly_tag=''
-          promote_stable=false
+          stable_pattern='^v([0-9]+\.[0-9]+\.[0-9]+)-beta$'
+          nightly_pattern='^v(([0-9]+\.[0-9]+\.[0-9]+)-nightly-[0-9]+)$'
 
-          if [[ "$requested_tag" =~ ^v([0-9]+\.[0-9]+\.[0-9]+)-beta$ ]]; then
-            stable_tag="$requested_tag"
-            promote_stable=true
-          elif [[ "$requested_tag" =~ ^v([0-9]+\.[0-9]+\.[0-9]+-nightly-[0-9]+)$ ]]; then
-            nightly_tag="$requested_tag"
+          # Always publish the newest releases, so a replayed or manual event
+          # cannot replace a newer package in either repository.
+          newest() {
+            printf '%s\n' "$@" | grep -v '^$' | sort -V | tail -n 1
+          }
+
+          stable_tag="$(gh release view --repo OpenTubeX/OpenTubeX --json tagName --jq .tagName)"
+          nightly_tag="$(gh release list --repo OpenTubeX/OpenTubeX --limit 100 \
+            --json createdAt,isPrerelease,tagName \
+            --jq '[.[] | select(.isPrerelease and (.tagName | test("^v[0-9]+\\.[0-9]+\\.[0-9]+-nightly-[0-9]+$")))] | sort_by(.createdAt) | reverse | .[0].tagName // ""')"
+
+          # The requested release can be newer than the release list returns.
+          if [[ "$requested_tag" =~ $stable_pattern ]]; then
+            stable_tag="$(newest "$stable_tag" "$requested_tag")"
+          elif [[ "$requested_tag" =~ $nightly_pattern ]]; then
+            nightly_tag="$(newest "$nightly_tag" "$requested_tag")"
           elif [[ -n "$requested_tag" ]]; then
             echo "Expected a stable or nightly OpenTubeX tag, got: $requested_tag" >&2
             exit 1
           fi
 
-          if [[ -z "$stable_tag" ]]; then
-            stable_tag="$(gh release view --repo OpenTubeX/OpenTubeX --json tagName --jq .tagName)"
-            if [[ -z "$requested_tag" ]]; then
-              promote_stable=true
-            fi
-          fi
-          if [[ ! "$stable_tag" =~ ^v([0-9]+\.[0-9]+\.[0-9]+)-beta$ ]]; then
+          if [[ ! "$stable_tag" =~ $stable_pattern ]]; then
             echo "Expected a stable tag, got: $stable_tag" >&2
             exit 1
           fi
           stable_version="${BASH_REMATCH[1]}"
 
-          if [[ -z "$nightly_tag" ]]; then
-            nightly_tag="$(gh release list --repo OpenTubeX/OpenTubeX --limit 100 \
-              --json createdAt,isPrerelease,tagName \
-              --jq '[.[] | select(.isPrerelease and (.tagName | test("^v[0-9]+\\.[0-9]+\\.[0-9]+-nightly-[0-9]+$")))] | sort_by(.createdAt) | reverse | .[0].tagName // ""')"
-          fi
-
           nightly_version=''
+          promote_stable=true
           if [[ -n "$nightly_tag" ]]; then
-            if [[ ! "$nightly_tag" =~ ^v([0-9]+\.[0-9]+\.[0-9]+-nightly-[0-9]+)$ ]]; then
+            if [[ ! "$nightly_tag" =~ $nightly_pattern ]]; then
               echo "Expected a nightly tag, got: $nightly_tag" >&2
               exit 1
             fi
             nightly_version="${BASH_REMATCH[1]}"
+            # Nightlies are numbered after the release they follow, so only a
+            # newer stable release replaces the nightly package.
+            if [[ "$(newest "${BASH_REMATCH[2]}" "$stable_version")" == "${BASH_REMATCH[2]}" ]]; then
+              promote_stable=false
+            fi
           fi
 
           {

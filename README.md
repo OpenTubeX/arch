@@ -6,11 +6,40 @@ Linux ARM at [arch.opentubex.org](https://arch.opentubex.org). It supports
 
 ## Install OpenTubeX
 
+Download the repository signing key and check its fingerprint:
+
 ```sh
-curl -fsSL https://arch.opentubex.org/opentubex.asc | sudo pacman-key --add -
+wget -O opentubex.asc https://arch.opentubex.org/opentubex.asc
+gpg --show-keys --fingerprint opentubex.asc
+```
+
+It must match:
+
+```text
+4A60 0616 2524 0FB5 6569  221B 4672 DA44 5C55 F193
+```
+
+Import and trust the key:
+
+```sh
+sudo pacman-key --add opentubex.asc
 sudo pacman-key --lsign-key 4A60061625240FB56569221B4672DA445C55F193
-printf '\n[opentubex]\nServer = https://arch.opentubex.org/$repo/$arch\n' \
-  | sudo tee -a /etc/pacman.conf >/dev/null
+```
+
+Add the repository:
+
+```sh
+sudo tee -a /etc/pacman.conf >/dev/null <<'REPO'
+
+[opentubex]
+SigLevel = Required DatabaseRequired
+Server = https://arch.opentubex.org/$repo/$arch
+REPO
+```
+
+Install OpenTubeX, or update it with the rest of your system:
+
+```sh
 sudo pacman -Syu opentubex
 ```
 

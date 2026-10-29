@@ -29,34 +29,57 @@
     </p>
 
     <h2 id="install">Install</h2>
-    <p>Trust the signing key, add the repository, then install OpenTubeX:</p>
+    <p>Download the signing key and check its fingerprint:</p>
     <div class="card">
-      <pre><code class="language-shell">curl -fsSL https://arch.opentubex.org/opentubex.asc | sudo pacman-key --add -
-sudo pacman-key --lsign-key 4A60061625240FB56569221B4672DA445C55F193
-printf '\n[opentubex]\nServer = https://arch.opentubex.org/$repo/$arch\n' \
-  | sudo tee -a /etc/pacman.conf &gt;/dev/null
-sudo pacman -Syu opentubex</code></pre>
+      <pre><code class="language-shell">wget -O opentubex.asc https://arch.opentubex.org/opentubex.asc
+gpg --show-keys --fingerprint opentubex.asc</code></pre>
+    </div>
+    <p>It must match:</p>
+    <div class="card">
+      <pre><code>4A60 0616 2524 0FB5 6569  221B 4672 DA44 5C55 F193</code></pre>
+    </div>
+
+    <p>Import and trust the key:</p>
+    <div class="card">
+      <pre><code class="language-shell">sudo pacman-key --add opentubex.asc
+sudo pacman-key --lsign-key 4A60061625240FB56569221B4672DA445C55F193</code></pre>
+    </div>
+
+    <p>Add the repository:</p>
+    <div class="card">
+      <pre><code class="language-shell">sudo tee -a /etc/pacman.conf &gt;/dev/null &lt;&lt;'REPO'
+
+[opentubex]
+SigLevel = Required DatabaseRequired
+Server = https://arch.opentubex.org/$repo/$arch
+REPO</code></pre>
+    </div>
+
+    <p>Install OpenTubeX, or update it with the rest of your system:</p>
+    <div class="card">
+      <pre><code class="language-shell">sudo pacman -Syu opentubex</code></pre>
     </div>
 
     <h2 id="nightly-builds">Nightly builds</h2>
     <p>
-      To follow development snapshots, add the nightly repository instead.
-      It uses the same signing key and also receives stable releases.
+      To follow development snapshots, trust the same signing key and add the
+      nightly repository instead. It also receives stable releases.
     </p>
     <div class="card">
-      <pre><code class="language-shell">printf '\n[opentubex-nightly]\nServer = https://arch.opentubex.org/$repo/$arch\n' \
-  | sudo tee -a /etc/pacman.conf &gt;/dev/null
-sudo pacman -Syu opentubex</code></pre>
+      <pre><code class="language-shell">sudo tee -a /etc/pacman.conf &gt;/dev/null &lt;&lt;'REPO'
+
+[opentubex-nightly]
+SigLevel = Required DatabaseRequired
+Server = https://arch.opentubex.org/$repo/$arch
+REPO</code></pre>
+    </div>
+    <div class="card">
+      <pre><code class="language-shell">sudo pacman -Syu opentubex</code></pre>
     </div>
     <p>
       Enable only one of <code>[opentubex]</code> and
       <code>[opentubex-nightly]</code> at a time.
     </p>
-
-    <h2 id="update">Update</h2>
-    <div class="card">
-      <pre><code class="language-shell">sudo pacman -Syu</code></pre>
-    </div>
 
     <h2 id="aur">AUR</h2>
     <p>

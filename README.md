@@ -44,9 +44,10 @@ sudo pacman -Syu opentubex
 ```
 
 Development snapshots are available through the opt-in `[opentubex-nightly]`
-repository. Use the same signing key and add it instead of `[opentubex]`.
-Stable and nightly packages are indexed separately, and the nightly repository
-also receives stable releases.
+repository. Use the same signing key and add it instead of `[opentubex]`. If
+`/etc/pacman.conf` already has an `[opentubex]` section, remove it first, or
+pacman keeps installing the stable package. Stable and nightly packages are
+indexed separately, and the nightly repository also receives stable releases.
 
 ## How publishing works
 

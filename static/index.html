@@ -63,7 +63,9 @@ REPO</code></pre>
     <h2 id="nightly-builds">Nightly builds</h2>
     <p>
       To follow development snapshots, trust the same signing key and add the
-      nightly repository instead. It also receives stable releases.
+      nightly repository instead. It also receives stable releases. If
+      <code>/etc/pacman.conf</code> already has an <code>[opentubex]</code>
+      section, remove it first, or pacman keeps installing the stable package.
     </p>
     <div class="card">
       <pre><code class="language-shell">grep -qxF '[opentubex-nightly]' /etc/pacman.conf || sudo tee -a /etc/pacman.conf &gt;/dev/null &lt;&lt;'REPO'
@@ -76,11 +78,6 @@ REPO</code></pre>
     <div class="card">
       <pre><code class="language-shell">sudo pacman -Syu opentubex</code></pre>
     </div>
-    <p>
-      Enable only one of <code>[opentubex]</code> and
-      <code>[opentubex-nightly]</code> at a time.
-    </p>
-
     <h2 id="aur">AUR</h2>
     <p>
       OpenTubeX is also available in the AUR as

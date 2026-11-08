@@ -34,9 +34,9 @@ mkdir -p "$repository_directory"
 
 sign() {
   gpg --batch --yes --pinentry-mode loopback \
-    --passphrase "$ARCH_GPG_PASSPHRASE" \
+    --passphrase-fd 0 \
     --local-user "$ARCH_GPG_KEY_ID" \
-    --detach-sign --output "$1.sig" "$1"
+    --detach-sign --output "$1.sig" "$1" <<< "$ARCH_GPG_PASSPHRASE"
 }
 
 download_published_package() {
@@ -44,8 +44,8 @@ download_published_package() {
   local destination=$2
 
   [[ -n "$published_url" ]] || return 1
-  if wget --quiet --output-document="$destination" "$url" \
-    && wget --quiet --output-document="$destination.sig" "$url.sig" \
+  if curl --fail --silent --location --output "$destination" "$url" \
+    && curl --fail --silent --location --output "$destination.sig" "$url.sig" \
     && gpg --batch --quiet --verify "$destination.sig" "$destination" 2>/dev/null; then
     return 0
   fi
